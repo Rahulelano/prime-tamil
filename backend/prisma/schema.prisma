@@ -1,0 +1,220 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// User model for admin authentication
+model User {
+  id        String   @id @default(cuid()) @map("_id")
+  email     String   @unique
+  password  String
+  name      String
+  role      String // Changed from enum to string
+  avatar    String?
+  phone     String?
+  bio       String?
+  status    String @default("ACTIVE") // Changed from enum to string
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  articles Article[]
+
+  @@map("users")
+}
+
+// Categories for organizing articles
+model Category {
+  id          String @id @default(cuid()) @map("_id")
+  name        String @unique
+  slug        String @unique
+  description String?
+  color       String? // Hex color code for UI
+  icon        String? // Icon name
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  articles Article[]
+
+  @@map("categories")
+}
+
+// Authors (content creators)
+model Author {
+  id        String @id @default(cuid()) @map("_id")
+  name      String
+  email     String @unique
+  phone     String?
+  bio       String
+  avatar    String?
+  role      String @default("AUTHOR") // Changed from enum to string
+  specialties String? // Changed from array to string (comma-separated)
+  socialLinks String? // Changed from Json to string (JSON serialized)
+  location  String?
+  verified  Boolean @default(false)
+  status    String @default("ACTIVE") // Changed from enum to string
+  joinDate  DateTime @default(now())
+  lastActive DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  articles Article[]
+
+  @@map("authors")
+}
+
+// Main articles model
+model Article {
+  id              String @id @default(cuid()) @map("_id")
+  title           String
+  slug            String @unique
+  excerpt         String
+  content         String
+  images          String[] // Array of image URLs
+  categoryId      String
+  authorId        String?  // Made optional for manual author entry
+  authorName      String?  // Manual author name
+  authorLogo      String?  // Manual author logo URL
+  userId          String? // User who created/edited
+  isFeatured      Boolean @default(false)
+  isBreaking      Boolean @default(false)
+  status          String @default("DRAFT") // Changed from enum to string
+  views           Int     @default(0)
+  likes           Int     @default(0)
+  shares          Int     @default(0)
+  // SEO fields
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String? // Changed from array to string (comma-separated)
+  // Publishing
+  publishedAt     DateTime?
+  scheduledFor    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  author   Author?   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: NoAction)
+  comments Comment[]
+
+  @@map("articles")
+}
+
+// Tags for articles
+model Tag {
+  id        String @id @default(cuid()) @map("_id")
+  name      String @unique
+  slug      String @unique
+  color     String? // Hex color code
+  createdAt DateTime @default(now())
+
+  @@map("tags")
+}
+
+// Comments on articles
+model Comment {
+  id        String @id @default(cuid()) @map("_id")
+  content   String
+  authorName String
+  authorEmail String
+  authorIp   String?
+  status    String @default("PENDING") // Changed from enum to string
+  articleId String
+  parentId  String? // For nested comments
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+// E-Paper issues
+model EpaperIssue {
+  id            String @id @default(cuid()) @map("_id")
+  issueDate     DateTime
+  pdfUrl        String
+  coverImage    String?
+  pageCount     Int
+  title         String?
+  description   String?
+  status        String @default("PUBLISHED") // Changed from enum to string
+  downloadCount Int     @default(0)
+  viewCount     Int     @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("epaper_issues")
+}
+
+// Media uploads
+model Media {
+  id          String @id @default(cuid()) @map("_id")
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  url         String
+  altText     String?
+  caption     String?
+  folder      String? // For organizing uploads
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+
+  @@map("media")
+}
+
+// Site settings/configuration
+model Setting {
+  id        String @id @default(cuid()) @map("_id")
+  key       String @unique
+  value     String
+  type      String @default("STRING") // Changed from enum to string
+  category  String? // For grouping settings
+  description String?
+  isPublic  Boolean @default(false) // Can be accessed by frontend
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// Hero section for homepage
+model Hero {
+  id          String @id @default(cuid()) @map("_id")
+  title       String
+  imageUrl    String // URL to the image
+  description String?
+  isActive    Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("heroes")
+}
+
+// Analytics/Statistics
+model Analytics {
+  id        String @id @default(cuid()) @map("_id")
+  date      DateTime
+  metric    String // 'page_views', 'unique_visitors', 'article_views', etc.
+  value     Int
+  metadata  String? // Changed from Json to string (JSON serialized)
+  createdAt DateTime @default(now())
+
+  @@map("analytics")
+}

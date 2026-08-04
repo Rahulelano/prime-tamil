@@ -1,0 +1,348 @@
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const slugify = require('slugify');
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Starting database seeding...');
+
+  try {
+    // Create admin user
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const adminUser = await prisma.user.upsert({
+      where: { email: 'admin@coimbatoreexpress.com' },
+      update: {},
+      create: {
+        email: 'admin@coimbatoreexpress.com',
+        password: hashedPassword,
+        name: 'Admin User',
+        role: 'ADMIN',
+        status: 'ACTIVE'
+      }
+    });
+    console.log('✅ Admin user created');
+
+    // Create categories
+    const categories = [
+      { name: 'Local', slug: 'local', description: 'Local news from Coimbatore', color: '#0A1F44', icon: 'MapPin' },
+      { name: 'Business', slug: 'business', description: 'Business and economic news', color: '#059669', icon: 'Briefcase' },
+      { name: 'Education', slug: 'education', description: 'Education and school news', color: '#7C3AED', icon: 'GraduationCap' },
+      { name: 'Sports', slug: 'sports', description: 'Sports and athletic events', color: '#DC2626', icon: 'Trophy' },
+      { name: 'Real Estate', slug: 'real-estate', description: 'Real estate and property news', color: '#EA580C', icon: 'Home' },
+      { name: 'Lifestyle', slug: 'lifestyle', description: 'Lifestyle and entertainment news', color: '#BE185D', icon: 'Heart' },
+      { name: 'Events', slug: 'events', description: 'Community events and celebrations', color: '#0891B2', icon: 'Calendar' },
+      { name: 'Transport', slug: 'transport', description: 'Transportation and infrastructure news', color: '#4F46E5', icon: 'Truck' }
+    ];
+
+    const createdCategories = [];
+    for (const category of categories) {
+      const created = await prisma.category.upsert({
+        where: { slug: category.slug },
+        update: {},
+        create: category
+      });
+      createdCategories.push(created);
+    }
+    console.log('✅ Categories created');
+
+    // Create authors
+    const authors = [
+      {
+        name: 'Coimbatore Express Staff',
+        email: 'news@coimbatoreexpress.com',
+        phone: '+91 98765 43210',
+        bio: 'Our dedicated team of local journalists covering news from Coimbatore and surrounding areas. We focus on delivering accurate, timely news that matters to our community.',
+        role: 'ADMIN',
+        specialties: ['Local News', 'Community Events', 'Politics'],
+        socialLinks: {
+          twitter: 'https://twitter.com/ctstaff',
+          linkedin: 'https://linkedin.com/company/coimbatore-express'
+        },
+        location: 'Coimbatore, Tamil Nadu',
+        verified: true
+      },
+      {
+        name: 'Sports Correspondent',
+        email: 'sports@coimbatoreexpress.com',
+        phone: '+91 98765 43211',
+        bio: 'Covering local sports and athletic events in Coimbatore and beyond. Passionate about bringing you the latest updates on cricket, football, athletics, and emerging sports.',
+        role: 'EDITOR',
+        specialties: ['Sports', 'Cricket', 'Football', 'Athletics'],
+        socialLinks: {
+          twitter: 'https://twitter.com/sportsct'
+        },
+        location: 'Coimbatore, Tamil Nadu',
+        verified: true
+      },
+      {
+        name: 'Business Reporter',
+        email: 'business@coimbatoreexpress.com',
+        phone: '+91 98765 43212',
+        bio: 'Reporting on local business and economic developments. Specializing in industry analysis, startup coverage, and economic trends affecting the Coimbatore region.',
+        role: 'AUTHOR',
+        specialties: ['Business', 'Economy', 'Startups', 'Industry'],
+        socialLinks: {
+          linkedin: 'https://linkedin.com/in/business-reporter-ct',
+          website: 'https://businessreporter.com'
+        },
+        location: 'Coimbatore, Tamil Nadu',
+        verified: true
+      }
+    ];
+
+    const createdAuthors = [];
+    for (const author of authors) {
+      const created = await prisma.author.upsert({
+        where: { email: author.email },
+        update: {},
+        create: author
+      });
+      createdAuthors.push(created);
+    }
+    console.log('✅ Authors created');
+
+    // Create sample articles
+    const sampleArticles = [
+      {
+        title: 'Special Pradosham Pooja Held at Dharmalingeswarar Temple',
+        excerpt: 'The renowned Dharmalingeswarar Temple, located on the hill at Mathukkarai in Coimbatore, witnessed special prayers on the occasion of Pradosham on Monday.',
+        content: `Coimbatore:
+The renowned Dharmalingeswarar Temple, located on the hill at Mathukkarai in Coimbatore, witnessed special prayers on the occasion of Pradosham on Monday.
+
+Special abhishekam and poojas were performed for Lord Dharmalingeswarar and Nandi. Following the rituals, the deity was adorned with special decorations and offered deepa aradhana. Devotees had darshan of the Lord in all his splendour as he bestowed blessings in an ornate attire.
+
+A large number of devotees participated in the event and offered their prayers. The temple committee had made elaborate arrangements for the smooth conduct of the rituals and to facilitate the devotees visit.`,
+        categoryId: createdCategories.find(c => c.slug === 'events').id,
+        authorId: createdAuthors.find(a => a.name === 'Coimbatore Express Staff').id,
+        status: 'PUBLISHED',
+        isFeatured: true,
+        isBreaking: false,
+        publishedAt: new Date('2025-11-07T10:00:00Z'),
+        views: 1250
+      },
+      {
+        title: 'Coimbatore Vizha to be held from November 14 to 24',
+        excerpt: 'The 18th edition of Coimbatore Vizha will take place from November 14 to 24, organized by the Young Indians (Yi) Coimbatore chapter.',
+        content: `Coimbatore:
+The 18th edition of Coimbatore Vizha will take place from November 14 to 24, organized by the Young Indians (Yi) Coimbatore chapter. The festival will be officially launched on the evening of October 31 at Brookefields Mall.
+
+Over 100 events are planned across 11 days, featuring the marquee Sky Dance projection mapping experience held each evening at CODISSIA Trade Fair Complex. This years Vizha emphasizes inclusivity, with business pitches by transgender entrepreneurs and para sports events for children with autism.
+
+Events are spread across multiple neighborhoods to engage residents directly. Highlights include the Isai Mazhai music program at six venues, clean-up drives at five locations, cultural showcases at 11 sites, and the Art Street festival on Scheme Road on November 22 and 23, along with musical performances on East TV Swamy Road.
+
+The festival aims to celebrate the spirit and diversity of Coimbatore through culture, community, and creativity.`,
+        categoryId: createdCategories.find(c => c.slug === 'events').id,
+        authorId: createdAuthors.find(a => a.name === 'Coimbatore Express Staff').id,
+        status: 'PUBLISHED',
+        isFeatured: true,
+        isBreaking: false,
+        publishedAt: new Date('2025-11-07T09:00:00Z'),
+        views: 2100
+      },
+      {
+        title: 'Coimbatore airport records 11% rise in passenger traffic',
+        excerpt: 'The Coimbatore International Airport has registered an 11 percent growth in passenger traffic, handling 17.6 lakh flyers between April and September this financial year.',
+        content: `Coimbatore:
+The Coimbatore International Airport has registered an 11 percent growth in passenger traffic, handling 17.6 lakh flyers between April and September this financial year, according to data from the Airports Authority of India (AAI).
+
+The airport had recorded over 30 lakh passengers in 2024, despite being designed for an annual capacity of 20 lakh. It now handles more than 30 departures a day, including domestic flights to major cities such as Chennai, Hyderabad, Mumbai, Delhi, Bengaluru, Pune, Goa, and Ahmedabad, and international services to Singapore, Abu Dhabi, and Sharjah.
+
+The Kongu Global Forum (KGF), a consortium of business and industrial leaders from Tamil Nadus western districts, urged the authorities to draw up an interim plan to enhance the airports handling capacity. It also sought additional flights on busy domestic routes and new international services to Colombo, Bangkok, Dubai, and Doha.
+
+Airport Director G. Sambath Kumar said that construction of a compound wall around the land recently transferred by the State government to the AAI is progressing and expected to be completed by September 2026. The wall will have a total length of about 16 kilometres.`,
+        categoryId: createdCategories.find(c => c.slug === 'transport').id,
+        authorId: createdAuthors.find(a => a.name === 'Coimbatore Express Staff').id,
+        status: 'PUBLISHED',
+        isFeatured: false,
+        isBreaking: true,
+        publishedAt: new Date('2025-11-07T08:30:00Z'),
+        views: 1850
+      },
+      {
+        title: 'Coimbatore Police to Install 1,400 CCTV Cameras, Step Up Night Patrolling',
+        excerpt: 'In a bid to strengthen security and curb crime, the Coimbatore City Police will install 1,400 new surveillance cameras across the city.',
+        content: `Coimbatore, 
+In a bid to strengthen security and curb crime, the Coimbatore City Police will install 1,400 new surveillance cameras across the city. Police Commissioner A. Saravana Sundar announced the initiative on Monday, stating that the move forms part of measures to enhance public safety and improve visible policing.
+
+The cameras will be installed in vulnerable and isolated areas, particularly around vacant lands, entry and exit points, and crime-prone localities. The decision follows the recent abduction and gang-rape of a 20-year-old college student near Brindhavan Nagar, close to the city airport.
+
+At present, the city has 700 police-installed CCTV cameras. The Commissioner noted that numerous cameras set up by private residents and business establishments were found to be non-functional. He urged the public to ensure that their surveillance systems remain active and properly maintained.
+
+Regular patrolling has contributed to a decline in assault-related cases this year. We will further intensify police presence in all parts of the city, Mr. Sundar said.
+
+Police personnel had patrolled Brindhavan Nagar on the day of the crime, according to officials. However, the offence occurred in a deserted plot along a mud road connecting Brindhavan Nagar and SIHS Colony.
+
+Coimbatore currently operates 59 two-wheeler beat patrol units and 25 GPS-enabled patrol vehicles. The Peelamedu police, under whose jurisdiction the incident took place, have five beat units and two patrol cars.
+
+Instructions have been issued to step up night patrolling along the Brindhavan Nagar–SIHS Colony stretch and similar isolated routes.
+
+Authorities said the expanded camera network and intensified patrolling efforts aim to provide enhanced safety to residents and deter criminal elements.`,
+        categoryId: createdCategories.find(c => c.slug === 'local').id,
+        authorId: createdAuthors.find(a => a.name === 'Coimbatore Express Staff').id,
+        status: 'PUBLISHED',
+        isFeatured: false,
+        isBreaking: true,
+        publishedAt: new Date('2025-11-07T08:00:00Z'),
+        views: 3200
+      },
+      {
+        title: 'Railways clears Vande Bharat service between Bengaluru and Ernakulam via Coimbatore',
+        excerpt: 'The Ministry of Railways has cleared the introduction of a new Vande Bharat Express between KSR Bengaluru and Ernakulam, passing through Coimbatore.',
+        content: `Coimbatore:
+The Ministry of Railways has cleared the introduction of a new Vande Bharat Express between KSR Bengaluru and Ernakulam, passing through Coimbatore. The train will operate six days a week, except on Wednesdays.
+
+According to the Railway Boards communication issued recently, Train No. 26651 KSR Bengaluru–Ernakulam Vande Bharat Express will depart Bengaluru at 5.10 a.m. and reach Ernakulam at 1.50 p.m. The return service, Train No. 26652, will leave Ernakulam at 2.20 p.m. and arrive in Bengaluru at 11 p.m.
+
+The train will halt at Krishnarajapuram, Salem, Erode, Tiruppur, Coimbatore, Palakkad, and Thrissur. During its southbound journey, it will pass Coimbatore at 10.35 a.m., Palakkad at 11.30 a.m., and Thrissur at 12.30 p.m. The same stations will be covered in reverse order while returning.
+
+The Railway Board has instructed South Western Railway and Southern Railway to commence services at an early, convenient date and to issue wide publicity. It has also permitted a special inaugural service before regular operations begin, if deemed necessary.
+
+The move has been welcomed by Coimbatore NXT, an initiative of the Confederation of Indian Industry (CII), Coimbatore, which said the train would enhance connectivity for both business and leisure travellers. The new Vande Bharat will cover the Coimbatore–Bengaluru route in five-and-a-half hours and the Coimbatore–Ernakulam stretch in about three hours, making it the fastest option available.
+
+The industry body also urged Southern Railway to cut the travel time of the existing Coimbatore–Bengaluru Vande Bharat to six hours and to introduce another service linking Coimbatore and Thiruvananthapuram via Ernakulam.
+
+During his recent visit to Coimbatore, Vice-President C.P. Radhakrishnan announced that a Vande Bharat train connecting Ernakulam and Bengaluru via Salem, Erode, Tiruppur, and Coimbatore, along with a daily train from Coimbatore to Ranchi, would be introduced shortly.`,
+        categoryId: createdCategories.find(c => c.slug === 'transport').id,
+        authorId: createdAuthors.find(a => a.name === 'Coimbatore Express Staff').id,
+        status: 'PUBLISHED',
+        isFeatured: false,
+        isBreaking: false,
+        publishedAt: new Date('2025-11-07T07:30:00Z'),
+        views: 2750
+      },
+      {
+        title: 'Coimbatore: The Rising Powerhouse of South India\'s Real Estate Market',
+        excerpt: 'Coimbatore, long celebrated as the Manchester of South India, is now commanding fresh attention as one of the country\'s fastest-growing real estate destinations.',
+        content: `Coimbatore, long celebrated as the Manchester of South India, is now commanding fresh attention as one of the country\'s fastest-growing real estate destinations. What began as a textile-driven industrial town has evolved into a diversified economic hub, home to over 25,000 manufacturing, engineering, jewellery, poultry, and IT enterprises — a transformation that is now directly translating into soaring property values.
+
+This growth story is powered by a rare blend of industrial strength, strategic infrastructure investments, and superior liveability. Remarkably, Coimbatore continues to rank among India\'s least-polluted urban centres, offering a quality of life unmatched in most fast-growing cities.
+
+A recent JLL study positions Coimbatore among India\'s top affordable investment markets — a compelling signal for value-seeking buyers and institutional investors alike. The impact is visible along emerging corridors and suburban belts, particularly near major highways, where land appreciation is accelerating.
+
+Smart City Vision Converts to Real-World Value: As one of the first 20 cities chosen under India\'s Smart Cities Mission, Coimbatore has benefited from targeted upgrades across mobility, utilities, sustainability, and digital governance. These strategic investments have strengthened the city\'s reputation as a well-planned, future-ready urban centre — a key determinant for modern investors seeking long-term, stable growth markets.
+
+Airport Expansion: A Catalyst for Capital Flows: A ₹2,000-crore expansion of Coimbatore International Airport represents a pivotal milestone in the city\'s growth trajectory. With 90% of land acquisition already complete, the expansion will unlock enhanced domestic and international connectivity, positioning Coimbatore for heightened investment inflows across sectors from global manufacturing to hospitality.
+
+Real estate activity around the airport corridor has already begun reflecting the shift, with rising demand and price appreciation.`,
+        categoryId: createdCategories.find(c => c.slug === 'real-estate').id,
+        authorId: createdAuthors.find(a => a.name === 'Business Reporter').id,
+        status: 'PUBLISHED',
+        isFeatured: true,
+        isBreaking: false,
+        publishedAt: new Date('2025-11-07T04:30:00Z'),
+        views: 4200
+      }
+    ];
+
+    for (const article of sampleArticles) {
+      const slug = slugify(article.title, { lower: true, strict: true });
+      await prisma.article.upsert({
+        where: { slug },
+        update: {},
+        create: {
+          ...article,
+          slug
+        }
+      });
+    }
+    console.log('✅ Sample articles created');
+
+    // Create e-paper issues
+    const epaperIssues = [
+      {
+        issueDate: new Date('2025-11-07'),
+        title: 'Coimbatore Express - November 7, 2025',
+        description: 'Latest news from Coimbatore including local events, business updates, and sports coverage.',
+        pageCount: 12,
+        status: 'PUBLISHED'
+      },
+      {
+        issueDate: new Date('2025-11-06'),
+        title: 'Coimbatore Express - November 6, 2025',
+        description: 'Comprehensive coverage of city developments and community events.',
+        pageCount: 10,
+        status: 'PUBLISHED'
+      },
+      {
+        issueDate: new Date('2025-11-05'),
+        title: 'Coimbatore Express - November 5, 2025',
+        description: 'Today\'s edition featuring special reports and analysis.',
+        pageCount: 14,
+        status: 'PUBLISHED'
+      }
+    ];
+
+    for (const issue of epaperIssues) {
+      await prisma.epaperIssue.create({
+        data: {
+          ...issue,
+          pdfUrl: `/uploads/epapers/sample-${issue.issueDate.toISOString().split('T')[0]}.pdf`,
+          coverImage: `/news (${Math.floor(Math.random() * 19) + 1}).jpeg`
+        }
+      });
+    }
+    console.log('✅ E-paper issues created');
+
+    // Create some tags
+    const tags = [
+      { name: 'breaking-news', slug: 'breaking-news', color: '#DC2626' },
+      { name: 'featured', slug: 'featured', color: '#7C3AED' },
+      { name: 'coimbatore', slug: 'coimbatore', color: '#0A1F44' },
+      { name: 'tamil-nadu', slug: 'tamil-nadu', color: '#059669' },
+      { name: 'politics', slug: 'politics', color: '#DC2626' },
+      { name: 'economy', slug: 'economy', color: '#059669' },
+      { name: 'infrastructure', slug: 'infrastructure', color: '#4F46E5' },
+      { name: 'sports', slug: 'sports', color: '#DC2626' },
+      { name: 'education', slug: 'education', color: '#7C3AED' },
+      { name: 'business', slug: 'business', color: '#059669' }
+    ];
+
+    for (const tag of tags) {
+      await prisma.tag.upsert({
+        where: { slug: tag.slug },
+        update: {},
+        create: tag
+      });
+    }
+    console.log('✅ Tags created');
+
+    // Create some settings
+    const settings = [
+      { key: 'site_name', value: 'Coimbatore Express', category: 'general', description: 'Website name' },
+      { key: 'site_description', value: 'Your trusted source for local news and updates from Coimbatore', category: 'general', description: 'Website description' },
+      { key: 'articles_per_page', value: '12', category: 'content', description: 'Number of articles per page' },
+      { key: 'comments_enabled', value: 'true', category: 'content', description: 'Enable/disable comments' },
+      { key: 'auto_approve_comments', value: 'false', category: 'moderation', description: 'Auto-approve comments' },
+      { key: 'max_file_size', value: '10485760', category: 'upload', description: 'Maximum file upload size in bytes' }
+    ];
+
+    for (const setting of settings) {
+      await prisma.setting.upsert({
+        where: { key: setting.key },
+        update: { value: setting.value },
+        create: setting
+      });
+    }
+    console.log('✅ Settings created');
+
+    console.log('🎉 Database seeding completed successfully!');
+    console.log('');
+    console.log('Default admin credentials:');
+    console.log('Email: admin@coimbatoreexpress.com');
+    console.log('Password: admin123');
+
+  } catch (error) {
+    console.error('❌ Error during seeding:', error);
+    throw error;
+  }
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
